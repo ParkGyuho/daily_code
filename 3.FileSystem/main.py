@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from byte_buffer2 import *
-
+from functools import reduce
 
 class Superblock:
     def __init__(self, bb):
@@ -27,6 +27,11 @@ class FatArea:
         self.fat = []
         for i in range(entry_count):
             self.fat.append(bb2.get_uint4_le())
+
+    def __str__(self):
+        # echeck only some entries of fat 0        
+        res = self.fat[2:10]
+        return reduce(lambda acc, cur: f"{acc}, {hex(cur)}", res, "")
 
 
 class DirectoryEntry:
