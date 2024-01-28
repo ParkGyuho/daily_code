@@ -38,7 +38,7 @@ class FatArea:
             self.fat.append(bb2.get_uint4_le())
 
     def __str__(self):
-        return ' '.join(hex(i) for i in self.fat)
+        return ' '.join(hex(i) for i in self.fat[:10])
 
 
 class DirectoryEntry:
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         file.seek(sb.fat_area_address)
         buffer2 = file.read(sb.fat_area_size)
         fat = FatArea(buffer2)
-        # print(fat)
+        print(fat)
 
         leaf_addr = 0x404040
         file.seek(leaf_addr)
