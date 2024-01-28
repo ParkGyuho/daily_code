@@ -19,6 +19,15 @@ class Superblock:
         # FAT영역 크기 = FAT 영역의 섹터 수 * 섹터 크기
         self.fat_area_size = bb.get_uint4_le() * self.sector_size
 
+    def __str__(self):
+        return (f"sector size: {hex(self.sector_size)}\n"
+                f"sector count: {hex(self.sector_count)}\n"
+                f"cluster size: {hex(self.cluster_size)}\n"
+                f"sector number: {hex(self.sector_no)}\n"
+                f"root cluster no: {hex(self.root_cluster_no)}\n"
+                f"fat area address: {hex(self.fat_area_address)}\n"
+                f"fat area size: {hex(self.fat_area_size)}")
+
 
 class FatArea:
     def __init__(self, buffer):
@@ -27,6 +36,9 @@ class FatArea:
         self.fat = []
         for i in range(entry_count):
             self.fat.append(bb2.get_uint4_le())
+
+    def __str__(self):
+        return ' '.join(hex(i) for i in self.fat)
 
 
 class DirectoryEntry:
@@ -70,10 +82,12 @@ if __name__ == "__main__":
         buffer = file.read(0x200)
         bb = ByteBuffer2(buffer)
         sb = Superblock(bb)
+        print(sb)
 
         file.seek(sb.fat_area_address)
         buffer2 = file.read(sb.fat_area_size)
         fat = FatArea(buffer2)
+        # print(fat)
 
         leaf_addr = 0x404040
         file.seek(leaf_addr)
