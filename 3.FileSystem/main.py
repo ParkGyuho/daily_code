@@ -40,9 +40,19 @@ class FatArea:
     def __str__(self):
         return ' '.join(hex(i) for i in self.fat[:10])
 
+    def get_cluster(self, start_cluster_no):
+        self.cluster_list = []
+        next = start_cluster_no
+
+        while next != 0xfffffff:
+            self.cluster_list.append(next)
+            next = self.fat[next]
+
+        return self.cluster_list
+
 
 class DirectoryEntry:
-    def __init__(self, bb, fat):
+    def __init__(self, bb):
         bb.offset(0xb)
         self.is_file = False
         attr = bb.get_uint1()
@@ -57,22 +67,16 @@ class DirectoryEntry:
 
         self.cluster_no = (cluster_hi << 16) | cluster_low
 
-        next = self.cluster_no
-        self.cluster_list = []
 
-        while next != 0xfffffff:
-            self.cluster_list.append(next)
-            next = fat.fat[next]
+def export_to(cluster_list, file, path):
+    start_add = 0x400000 + (cluster_list[0] - 2) * 0x1000
+    end_add = 0x400000 + (cluster_list[-1] - 2) * 0x1000
+    # print(hex(start_add), hex(end_add))
 
-    def export_to(self, file, path):
-        start_add = 0x400000 + (self.cluster_list[0] - 2) * 0x1000
-        end_add = 0x400000 + (self.cluster_list[-1] - 2) * 0x1000
-        # print(hex(start_add), hex(end_add))
-
-        with open(path, 'wb') as f:
-            file.seek(start_add)
-            b = file.read(end_add-start_add)
-            f.write(b)
+    with open(path, 'wb') as f:
+        file.seek(start_add)
+        b = file.read(end_add-start_add)
+        f.write(b)
 
 
 if __name__ == "__main__":
@@ -93,12 +97,14 @@ if __name__ == "__main__":
         file.seek(leaf_addr)
         buffer3 = file.read(0x20)
         bb3 = ByteBuffer2(buffer3)
-        leaf = DirectoryEntry(bb3, fat)
-        leaf.export_to(file, "leaf.jpg")
+        leaf = DirectoryEntry(bb3)
+        leaf_cluster = fat.get_cluster(leaf.cluster_no)
+        export_to(leaf_cluster, file, "leaf.jpg")
 
         port_addr = 0x404060
         file.seek(port_addr)
         buffer4 = file.read(0x20)
         bb4 = ByteBuffer2(buffer4)
-        port = DirectoryEntry(bb4, fat)
-        port.export_to(file, "port.jpg")
+        port = DirectoryEntry(bb4)
+        port_cluster = fat.get_cluster(port.cluster_no)
+        export_to(port_cluster, file, "port.jpg")
