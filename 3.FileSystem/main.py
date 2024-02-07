@@ -18,6 +18,8 @@ class Superblock:
         bb.offset = 0x24
         # FAT영역 크기 = FAT 영역의 섹터 수 * 섹터 크기
         self.fat_area_size = bb.get_uint4_le() * self.sector_size
+        # Data 영역 시작 주소 = FAT 영역 시작 주소 + FAT 영역 총 크기
+        self.data_address = self.fat_area_address + (0x2 * self.fat_area_size)
 
     def __str__(self):
         return (f"sector size: {hex(self.sector_size)}\n"
@@ -26,7 +28,8 @@ class Superblock:
                 f"sector number: {hex(self.sector_no)}\n"
                 f"root cluster no: {hex(self.root_cluster_no)}\n"
                 f"fat area address: {hex(self.fat_area_address)}\n"
-                f"fat area size: {hex(self.fat_area_size)}")
+                f"fat area size: {hex(self.fat_area_size)}\n"
+                f"data address: {hex(self.data_address)}")
 
 
 class FatArea:
@@ -68,9 +71,11 @@ class DirectoryEntry:
         self.cluster_no = (cluster_hi << 16) | cluster_low
 
 
-def export_to(cluster_list, file, path):
-    start_add = 0x400000 + (cluster_list[0] - 2) * 0x1000
-    end_add = 0x400000 + (cluster_list[-1] - 2) * 0x1000
+def export_to(Superblock, cluster_list, file, path):
+    start_add = Superblock.data_address + \
+        (cluster_list[0] - 2) * Superblock.cluster_size
+    end_add = Superblock.data_address + \
+        (cluster_list[-1] - 2) * Superblock.cluster_size
     # print(hex(start_add), hex(end_add))
 
     with open(path, 'wb') as f:
@@ -99,7 +104,7 @@ if __name__ == "__main__":
         bb3 = ByteBuffer2(buffer3)
         leaf = DirectoryEntry(bb3)
         leaf_cluster = fat.get_cluster(leaf.cluster_no)
-        export_to(leaf_cluster, file, "leaf.jpg")
+        export_to(sb, leaf_cluster, file, "leaf.jpg")
 
         port_addr = 0x404060
         file.seek(port_addr)
@@ -107,4 +112,4 @@ if __name__ == "__main__":
         bb4 = ByteBuffer2(buffer4)
         port = DirectoryEntry(bb4)
         port_cluster = fat.get_cluster(port.cluster_no)
-        export_to(port_cluster, file, "port.jpg")
+        export_to(sb, port_cluster, file, "port.jpg")
